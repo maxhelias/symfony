@@ -865,6 +865,39 @@ XML;
         $this->assertEquals($expected, $encoder->encode($data, 'xml'));
     }
 
+    public function testEncodeWithSortAttributes()
+    {
+        $encoder = new XmlEncoder(array(
+            XmlEncoder::SORT_ATTR => XmlEncoder::SORT_ASC
+        ));
+
+        $data = array(
+            'foo-bar' => array(
+                '@id' => 1,
+                '@name' => 'Bar',
+            ),
+            'Foo' => array(
+                'Bar' => 'Test',
+                '@Type' => 'test',
+            ),
+            'föo_bär' => 'a',
+            'Bar' => array(1, 2, 3),
+            'a' => 'b',
+        );
+        $expected = '<?xml version="1.0"?>'."\n".
+            '<response>'.
+            '<Bar>1</Bar>'.
+            '<Bar>2</Bar>'.
+            '<Bar>3</Bar>'.
+            '<Foo Type="test"><Bar>Test</Bar></Foo>'.
+            '<a>b</a>'.
+            '<foo-bar id="1" name="Bar"/>'.
+            '<föo_bär>a</föo_bär>'.
+            '</response>'."\n";
+
+        $this->assertEquals($expected, $encoder->encode($data, 'xml'));
+    }
+
     /**
      * @return XmlEncoder
      */

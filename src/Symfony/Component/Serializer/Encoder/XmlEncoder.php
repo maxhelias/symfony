@@ -45,6 +45,13 @@ class XmlEncoder implements EncoderInterface, DecoderInterface, NormalizationAwa
     const FORMAT_OUTPUT = 'xml_format_output';
 
     /**
+     * A bit field for order attributes
+     */
+    const SORT_ATTR = 'sort_attr';
+    const SORT_ASC = 'ksort';
+    const SORT_DESC = 'krsort';
+
+    /**
      * A bit field of LIBXML_* constants.
      */
     const LOAD_OPTIONS = 'load_options';
@@ -58,6 +65,7 @@ class XmlEncoder implements EncoderInterface, DecoderInterface, NormalizationAwa
         self::AS_COLLECTION => false,
         self::DECODER_IGNORED_NODE_TYPES => array(XML_PI_NODE, XML_COMMENT_NODE),
         self::ENCODER_IGNORED_NODE_TYPES => array(),
+        self::SORT_ATTR => null,
         self::LOAD_OPTIONS => LIBXML_NONET | LIBXML_NOBLANKS,
         self::REMOVE_EMPTY_TAGS => false,
         self::ROOT_NODE_NAME => 'response',
@@ -88,6 +96,13 @@ class XmlEncoder implements EncoderInterface, DecoderInterface, NormalizationAwa
         }
 
         $this->defaultContext = array_merge($this->defaultContext, $defaultContext);
+
+        // Prevent error
+        if ($this->defaultContext[self::SORT_ATTR] !== null && !\is_callable($this->defaultContext[self::SORT_ATTR])) {
+            @trigger_error('Invalid callable sort attributes', E_USER_WARNING);
+
+            $this->defaultContext[self::SORT_ATTR] = null;
+        }
     }
 
     /**
@@ -410,8 +425,10 @@ class XmlEncoder implements EncoderInterface, DecoderInterface, NormalizationAwa
         $append = true;
         $removeEmptyTags = $this->context[self::REMOVE_EMPTY_TAGS] ?? $this->defaultContext[self::REMOVE_EMPTY_TAGS] ?? false;
         $encoderIgnoredNodeTypes = $this->context[self::ENCODER_IGNORED_NODE_TYPES] ?? $this->defaultContext[self::ENCODER_IGNORED_NODE_TYPES];
+        $sortAttr = $this->context[self::SORT_ATTR] ?? $this->defaultContext[self::SORT_ATTR];
 
         if (\is_array($data) || ($data instanceof \Traversable && !$this->serializer->supportsNormalization($data, $this->format))) {
+            $sortAttr !== null ? $sortAttr($data) : null;
             foreach ($data as $key => $data) {
                 //Ah this is the magic @ attribute types.
                 if (0 === strpos($key, '@') && $this->isElementNameValid($attributeName = substr($key, 1))) {
